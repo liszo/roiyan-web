@@ -39,3 +39,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# design references (local only)
+/refs/
+
+# Claude Code personal settings
+/.claude/settings.local.json
