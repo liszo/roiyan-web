@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "skills": {
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "de0ad62df4a20451e6f9715b6861b068ac8f558b1829a5c7b947c58ae94f0c6f"
+    },
+    "lahne-man": {
+      "source": "RezaEsmailGol/lahne-man",
+      "sourceType": "github",
+      "skillPath": "skills/lahne-man/SKILL.md",
+      "computedHash": "36236b9a3c8156f562d122da8a491c7315e75f12cd4a9e7504ce78d8b869c5a9"
+    },
+    "vibe-to-ui": {
+      "source": "MonkeyUI-dev/vibe-to-ui",
+      "ref": "v0.6.0",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "4135dcbe271ebe97a1c72681df5b81a542aa598b12af664594fca005c52f49a9"
+    }
+  }
+}
