@@ -45,3 +45,6 @@ next-env.d.ts
 
 # Claude Code personal settings
 /.claude/settings.local.json
+
+# copies made by the skills installer for other AI tools (Claude Code uses .claude/skills)
+/.agents/
