@@ -1,0 +1,39 @@
+/* Sticky mobile CTA: appears once the visitor has scrolled past the first screen. */
+@supports (animation-timeline: scroll()) {
+  .kit-sticky {
+    animation: kit-sticky-in linear both;
+    animation-timeline: scroll(root);
+    animation-range: 60vh 80vh;
+  }
+}
+
+@keyframes kit-sticky-in {
+  from {
+    opacity: 0;
+    transform: translateY(100%);
+    visibility: hidden;
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+    visibility: visible;
+  }
+}
+
+@keyframes kit-sticky-fade {
+  from {
+    opacity: 0;
+    visibility: hidden;
+  }
+  to {
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+/* Reduced motion: no sliding, only a fade tied to the scroll position. */
+@media (prefers-reduced-motion: reduce) {
+  .kit-sticky {
+    animation-name: kit-sticky-fade;
+  }
+}
