@@ -16,6 +16,7 @@ export function PhoneFrame({
   bar,
   keyboard = false,
   scrolledBy = 0,
+  barHeight = BAR_H,
 }: {
   /** LTR label above the frame, e.g. "5 · SB track · G1 owner". */
   label: string;
@@ -28,8 +29,10 @@ export function PhoneFrame({
   keyboard?: boolean;
   /** Draw the page scrolled up by this many px (clipped to the viewport), e.g. focused field above the keyboard. */
   scrolledBy?: number;
+  /** Height of the sticky bar (default: one 48 px button). Taller bars, e.g. totals + button, pass their own. */
+  barHeight?: number;
 }) {
-  const barTop = FRAME_H - (keyboard ? KEYBOARD_H : 0) - BAR_H;
+  const barTop = FRAME_H - (keyboard ? KEYBOARD_H : 0) - barHeight;
   return (
     <figure className="flex flex-col gap-2" style={{ width: FRAME_W }} data-frame={label}>
       <figcaption dir="ltr" lang="en" className="font-mono text-xs leading-5 text-neutral-700">
@@ -46,7 +49,7 @@ export function PhoneFrame({
           dir="rtl"
           lang="fa"
           data-frame-content
-          style={{ paddingBottom: bar ? BAR_H + 16 : 16, marginTop: scrolledBy ? -scrolledBy : undefined }}
+          style={{ paddingBottom: bar ? barHeight + 16 : 16, marginTop: scrolledBy ? -scrolledBy : undefined }}
         >
           {children}
         </div>
@@ -72,7 +75,7 @@ export function PhoneFrame({
           <div
             dir="rtl"
             className="absolute inset-x-0 border-t border-neutral-400 bg-white p-4"
-            style={{ top: barTop, height: BAR_H }}
+            style={{ top: barTop, height: barHeight }}
           >
             {bar}
           </div>
