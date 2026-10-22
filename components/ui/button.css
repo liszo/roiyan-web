@@ -1,0 +1,861 @@
+/* Roiyan buttons (kit #01 · D-095 · DESIGN.md §3, §13). Shared by button.tsx, text-link.tsx, icon-button.tsx.
+   Plain CSS on purpose (CSS modules are broken by the Turbopack rule in next.config). Prefix: rb-.
+   Tokens only (var(--brand) … from app/globals.css :root; easing from its @theme static block).
+   Motion animates transform and opacity only (§13.2.7).
+
+   State model — every control carries two numbers its children read:
+     --rb-e = engaged  (hover on hover-capable devices · keyboard focus · press · data-force on /kit)
+     --rb-p = pressed  (pointer/keyboard press, held ≥ 140 ms by usePress so a quick tap is still seen)
+   Hover sits inside @media (hover: hover) so it never sticks after a tap on a phone.
+   Variants on night surfaces: hero, glass, ghost-night (and links/icons with data-tone="night"). */
+
+.rb,
+.rb-icon {
+  --rb-h: 52px; /* face height */
+  --rb-orb: 40px; /* arrow circle */
+  --rb-white: var(--surface);
+  --rb-shadow-rest: 0 1px 2px color-mix(in oklab, var(--brand-dark) 14%, transparent),
+    0 4px 12px -4px color-mix(in oklab, var(--brand-dark) 22%, transparent);
+  --rb-shadow-lift: 0 2px 4px color-mix(in oklab, var(--brand-dark) 16%, transparent),
+    0 12px 24px -8px color-mix(in oklab, var(--brand-dark) 32%, transparent);
+  --rb-ring: color-mix(in oklab, var(--brand) 80%, transparent);
+}
+
+.rb:is([data-v="hero"], [data-v="glass"], [data-v="ghost-night"]),
+.rb-icon[data-tone="night"] {
+  --rb-ring: color-mix(in oklab, var(--surface) 85%, transparent);
+}
+
+/* ── skeleton ────────────────────────────────────────────────────────────── */
+
+.rb {
+  --rb-e: 0;
+  --rb-p: 0;
+  position: relative;
+  display: inline-grid;
+  min-height: 44px;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  font: inherit;
+  font-weight: 700;
+  font-size: 16px;
+  line-height: 24px;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+  transition: outline-color 150ms var(--ease-out);
+}
+
+.rb[data-size="sm"] {
+  --rb-h: 44px;
+  --rb-orb: 32px;
+  font-size: 14px;
+}
+
+.rb[data-block] {
+  display: grid;
+  width: 100%;
+}
+
+@media (hover: hover) {
+  .rb:hover:not(:disabled):not([aria-disabled="true"]) {
+    --rb-e: 1;
+  }
+}
+
+.rb:focus-visible,
+.rb:active,
+.rb[data-pressed],
+.rb[data-force] {
+  --rb-e: 1;
+}
+
+.rb:active,
+.rb[data-pressed],
+.rb[data-force="pressed"] {
+  --rb-p: 1;
+}
+
+.rb:disabled,
+.rb[aria-disabled="true"] {
+  --rb-e: 0;
+  --rb-p: 0;
+  cursor: not-allowed;
+}
+
+.rb[aria-busy="true"] {
+  cursor: progress;
+}
+
+.rb:focus-visible,
+.rb[data-force="focus"] {
+  outline-color: var(--rb-ring);
+}
+
+/* Tactile base (Action, Hero): a darker pill under the face; the face sinks into it on press. */
+.rb-base {
+  position: absolute;
+  inset: 3px 0 0;
+  border-radius: 999px;
+  background: var(--action-dark);
+}
+
+.rb[data-base] {
+  padding-bottom: 3px;
+}
+
+.rb-face {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  min-height: var(--rb-h);
+  overflow: hidden;
+  border-radius: 999px;
+  transform: translateY(calc(var(--rb-p) * 3px));
+  transition: transform 100ms var(--ease-press);
+}
+
+/* Content stack: idle and success share one grid cell, so the width is the widest of the two and never jumps. */
+.rb-stack {
+  position: relative;
+  z-index: 3;
+  display: grid;
+}
+
+.rb-layer {
+  grid-area: 1 / 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--rb-h);
+  padding-inline: 24px;
+  white-space: nowrap;
+  transition: transform 160ms var(--ease-in-out);
+}
+
+.rb[data-size="sm"] .rb-layer {
+  padding-inline: 18px;
+  gap: 8px;
+}
+
+/* Orb layout: the label centres in the free space and the arrow slot is pinned to the end, exactly over the
+   orb — even when the success text makes the (locked) button wider than the idle label. */
+.rb-layer[data-orb] {
+  justify-content: space-between;
+}
+
+.rb .rb-layer[data-orb] {
+  padding-inline-end: 6px;
+}
+
+.rb-layer[data-orb] > :first-child {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+.rb-slot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: var(--rb-orb);
+  height: var(--rb-orb);
+}
+
+.rb svg {
+  width: 20px;
+  height: 20px;
+  flex: none;
+}
+
+.rb[data-size="sm"] svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* The arrow ← (forward in RTL) moves further toward the end while engaged. */
+.rb-arrow {
+  display: inline-flex;
+  transform: translateX(calc(var(--rb-e) * -4px));
+  transition: transform 220ms var(--ease-out);
+}
+
+:dir(ltr) .rb-arrow {
+  rotate: 180deg;
+}
+
+.rb-fx {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.rb-fx > * {
+  position: absolute;
+}
+
+/* ── Action and Hero: the arrow circle fills the pill (candidate A) ───────── */
+
+.rb:is([data-v="action"], [data-v="hero"]) .rb-face {
+  background: var(--action);
+  color: var(--ink);
+}
+
+.rb:is([data-v="action"], [data-v="hero"]) .rb-slot {
+  color: var(--brand);
+}
+
+.rb-orb {
+  inset-inline-end: 6px;
+  top: calc((var(--rb-h) - var(--rb-orb)) / 2);
+  width: var(--rb-orb);
+  height: var(--rb-orb);
+  border-radius: 999px;
+  background: var(--rb-white);
+  transform: scale(calc(1 + var(--rb-e) * 17));
+  transition: transform 300ms var(--ease-out); /* leaving */
+}
+
+@media (hover: hover) {
+  .rb:hover .rb-orb {
+    transition-duration: 420ms; /* entering */
+  }
+}
+
+.rb:is(:focus-visible, :active, [data-pressed], [data-force]) .rb-orb {
+  transition-duration: 420ms;
+}
+
+/* After the fill the face is surface-white; this inset ring keeps it reading as the action button. */
+.rb-edge {
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: inset 0 0 0 2px var(--action);
+}
+
+/* Hero: a soft action glow under it and a light that travels the border right → left. */
+.rb-glow {
+  position: absolute;
+  inset: 8px 12px -2px;
+  z-index: 0;
+  border-radius: 999px;
+  background: var(--action);
+  filter: blur(20px);
+  opacity: calc(0.3 + var(--rb-e) * 0.15);
+  transition: opacity 300ms var(--ease-out);
+  pointer-events: none;
+}
+
+.rb[data-v="hero"] .rb-base {
+  inset-block-start: 2px;
+}
+
+.rb[data-v="hero"] .rb-face {
+  transform: translateY(calc(var(--rb-p) * 2px));
+}
+
+/* Ring: a 2 px border-shaped window; a rotating conic square inside it is the light. Transform-only motion. */
+.rb-ring {
+  inset: 0;
+  z-index: 4;
+  padding: 2px;
+  border-radius: inherit;
+  opacity: 0;
+  overflow: hidden;
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask:
+    linear-gradient(#000 0 0) content-box exclude,
+    linear-gradient(#000 0 0);
+}
+
+.rb-rotor {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 150%;
+  aspect-ratio: 1;
+  translate: -50% -50%;
+}
+
+.rb-hero-ring .rb-rotor {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 290deg,
+    color-mix(in oklab, var(--rb-white) 95%, transparent) 345deg,
+    transparent 360deg
+  );
+}
+
+/* Once on enter, then every 6 s (1.2 s sweep + 4.8 s rest). The only loop allowed on a screen (§13.1). */
+.rb[data-v="hero"][data-entered] .rb-hero-ring {
+  animation: rb-hero-fade 6s linear 300ms infinite both;
+}
+
+.rb[data-v="hero"][data-entered] .rb-hero-ring .rb-rotor {
+  animation: rb-hero-turn 6s var(--ease-in-out) 300ms infinite both;
+}
+
+@keyframes rb-hero-turn {
+  0% {
+    rotate: 0deg;
+  }
+  20%,
+  100% {
+    rotate: -360deg;
+  }
+}
+
+@keyframes rb-hero-fade {
+  0% {
+    opacity: 0;
+  }
+  3%,
+  17% {
+    opacity: 1;
+  }
+  20%,
+  100% {
+    opacity: 0;
+  }
+}
+
+/* ── Brand, Ghost, Ghost on night: lift on hover / focus, sink on press ──── */
+
+.rb:is([data-v="brand"], [data-v="ghost"], [data-v="ghost-night"]) .rb-face {
+  transform: translateY(calc(var(--rb-e) * -1px + var(--rb-p) * 3px));
+  transition: transform 220ms var(--ease-out);
+}
+
+.rb:is([data-v="brand"], [data-v="ghost"], [data-v="ghost-night"]):is(:active, [data-pressed], [data-force="pressed"])
+  .rb-face {
+  transition-duration: 100ms;
+  transition-timing-function: var(--ease-press);
+}
+
+/* Shadows never animate: two pre-drawn layers cross-fade (opacity only). */
+.rb-shadow {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  transition: opacity 220ms var(--ease-out);
+}
+
+.rb-shadow[data-s="rest"] {
+  box-shadow: var(--rb-shadow-rest);
+  opacity: calc(1 - var(--rb-e) + var(--rb-p));
+}
+
+.rb-shadow[data-s="lift"] {
+  box-shadow: var(--rb-shadow-lift);
+  opacity: calc(var(--rb-e) - var(--rb-p));
+}
+
+.rb[data-v="brand"] .rb-face {
+  background: linear-gradient(to bottom, var(--brand), var(--brand-dark));
+  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--rb-white) 25%, transparent);
+  color: var(--rb-white);
+}
+
+.rb[data-v="ghost"] .rb-face {
+  color: var(--brand);
+  box-shadow: inset 0 0 0 2px var(--brand);
+}
+
+.rb-tint {
+  inset: 0;
+  border-radius: inherit;
+  background: var(--brand-tint);
+  opacity: var(--rb-e);
+  transition: opacity 220ms var(--ease-out);
+}
+
+/* Ghost on night: a surface-white fill rises from the bottom with a curved top edge. Inside it an ink copy of
+   the label moves the opposite way, so the label is white exactly where night shows and ink exactly where the
+   fill is, at every frame. */
+.rb[data-v="ghost-night"] .rb-face {
+  color: var(--rb-white);
+  box-shadow: inset 0 0 0 1.5px color-mix(in oklab, var(--rb-white) 60%, transparent);
+}
+
+.rb-liquid {
+  --rb-travel: calc(var(--rb-h) * 1.5);
+  position: absolute;
+  inset: auto 0 0;
+  z-index: 4;
+  height: calc(var(--rb-h) * 1.4);
+  overflow: hidden;
+  border-radius: 50% 50% 0 0 / 22% 22% 0 0;
+  background: var(--rb-white);
+  pointer-events: none;
+  transform: translateY(calc((1 - var(--rb-e)) * var(--rb-travel)));
+  transition: transform 450ms var(--ease-out);
+}
+
+.rb-liquid-label {
+  position: absolute;
+  inset: auto 0 0;
+  display: grid;
+  height: var(--rb-h);
+  color: var(--ink);
+  transform: translateY(calc((1 - var(--rb-e)) * var(--rb-travel) * -1));
+  transition: transform 450ms var(--ease-out);
+}
+
+/* ── Glass (night or over media) ─────────────────────────────────────────── */
+
+.rb[data-v="glass"] .rb-face {
+  background: color-mix(in oklab, var(--brand) 14%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in oklab, var(--rb-white) 25%, transparent),
+    inset 0 1px 0 color-mix(in oklab, var(--rb-white) 30%, transparent);
+  color: var(--rb-white);
+  transform: scale(calc(1 - var(--rb-p) * 0.03));
+  transition: transform 120ms var(--ease-press);
+}
+
+/* Specular band: face-wide element, band drawn in the middle, travels right → left (reading direction). */
+.rb-band {
+  inset: 0;
+  opacity: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    color-mix(in oklab, var(--rb-white) 16%, transparent) 50%,
+    transparent 70%
+  );
+  transform: translateX(100%);
+}
+
+@keyframes rb-band {
+  0% {
+    opacity: 1;
+    transform: translateX(100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-100%);
+  }
+}
+
+@media (hover: hover) {
+  .rb[data-v="glass"]:hover .rb-band {
+    animation: rb-band 700ms var(--ease-in-out) 1 both;
+  }
+}
+
+.rb[data-v="glass"]:is(:focus-visible, :active, [data-pressed], [data-force]) .rb-band {
+  animation: rb-band 700ms var(--ease-in-out) 1 both;
+}
+
+/* Solid fallback: low-end device or forced (data-solid), no backdrop-filter, or reduced transparency. */
+.rb[data-v="glass"][data-solid] .rb-face {
+  background: color-mix(in oklab, var(--brand-dark) 85%, var(--night));
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .rb[data-v="glass"] .rb-face {
+    background: color-mix(in oklab, var(--brand-dark) 85%, var(--night));
+  }
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .rb[data-v="glass"] .rb-face {
+    background: color-mix(in oklab, var(--brand-dark) 85%, var(--night));
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ── Loading and success ─────────────────────────────────────────────────── */
+
+/* Loading: the border becomes a rotating "scan" (brand on light, action on night). It stops when waiting ends. */
+.rb-scan .rb-rotor {
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    transparent 150deg,
+    var(--brand-tint) 260deg,
+    var(--brand) 360deg
+  );
+}
+
+.rb:is([data-v="hero"], [data-v="glass"], [data-v="ghost-night"]) .rb-scan .rb-rotor {
+  background: conic-gradient(from 0deg, transparent 0deg, transparent 150deg, var(--action) 360deg);
+}
+
+.rb[data-status="loading"] .rb-scan {
+  opacity: 1;
+}
+
+.rb[data-status="loading"] .rb-scan .rb-rotor {
+  animation: rb-turn 1.4s linear infinite;
+}
+
+.rb[data-status="loading"] .rb-hero-ring {
+  display: none;
+}
+
+@keyframes rb-turn {
+  to {
+    rotate: -360deg;
+  }
+}
+
+.rb-spin {
+  animation: rb-spin 900ms linear infinite;
+}
+
+@keyframes rb-spin {
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Success: no text is visible while the colour underneath changes, so contrast holds at every frame.
+   1) the idle label slides up out of the face (0–160 ms), 2) brand fades in under no text (160–320 ms),
+   3) ✓ + text slide up into place with the press curve (from 320 ms). */
+.rb-donebg {
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  background: var(--brand);
+  opacity: 0;
+  transition: opacity 160ms var(--ease-out);
+}
+
+.rb-layer[data-layer="done"] {
+  color: var(--rb-white);
+  transform: translateY(110%);
+  visibility: hidden;
+}
+
+.rb[data-status="success"] .rb-layer[data-layer="idle"] {
+  transform: translateY(-110%);
+  visibility: hidden;
+  transition:
+    transform 160ms var(--ease-in-out),
+    visibility 0s linear 160ms;
+}
+
+.rb[data-status="success"] .rb-donebg {
+  opacity: 1;
+  transition-delay: 160ms;
+}
+
+.rb[data-status="success"] .rb-layer[data-layer="done"] {
+  transform: translateY(0);
+  visibility: visible;
+  transition:
+    transform 320ms var(--ease-press) 320ms,
+    visibility 0s linear 320ms;
+}
+
+.rb-check {
+  display: inline-flex;
+  scale: 0.4;
+}
+
+.rb[data-status="success"] .rb-check {
+  scale: 1;
+  transition: scale 360ms var(--ease-press) 380ms;
+}
+
+.rb[data-status="success"] .rb-base {
+  background: var(--brand-dark);
+}
+
+.rb[data-status="success"] .rb-face {
+  --rb-e: 0; /* no fill / sweep behind the success colour */
+}
+
+/* Burst (earned moments only): 12 dots and rings in brand + action, once, 700 ms, from the centre. */
+.rb-burst {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  z-index: 6;
+  pointer-events: none;
+}
+
+.rb-burst > span {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--s);
+  height: var(--s);
+  border-radius: 999px;
+  background: var(--c);
+  opacity: 0;
+  animation: rb-burst 700ms var(--ease-out) 380ms 1 both;
+}
+
+.rb-burst > span[data-ring] {
+  background: transparent;
+  box-shadow: inset 0 0 0 1.5px var(--c);
+}
+
+@keyframes rb-burst {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateX(10px) scale(0.4);
+  }
+  55% {
+    opacity: 1;
+    transform: translate(-50%, -50%) rotate(var(--a)) translateX(var(--d)) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, calc(-50% + 16px)) rotate(var(--a)) translateX(calc(var(--d) * 1.18)) scale(0.7);
+  }
+}
+
+/* ── Disabled (inactive controls are exempt from contrast rules, but stay legible) ─────────────── */
+
+.rb:disabled :is(.rb-base, .rb-glow, .rb-shadow) {
+  display: none;
+}
+
+.rb:disabled .rb-face {
+  transform: none;
+}
+
+.rb:disabled :is(.rb-band, .rb-ring, .rb-liquid) {
+  display: none;
+}
+
+.rb:disabled[data-v="action"] .rb-face {
+  background: color-mix(in oklab, var(--action) 45%, var(--bg));
+  color: color-mix(in oklab, var(--ink) 60%, transparent);
+}
+
+.rb:disabled[data-v="hero"] .rb-face {
+  background: color-mix(in oklab, var(--action) 35%, var(--night));
+  color: color-mix(in oklab, var(--ink) 75%, transparent);
+}
+
+.rb:disabled:is([data-v="action"], [data-v="hero"]) .rb-orb {
+  opacity: 0.6;
+}
+
+.rb:disabled[data-v="brand"] .rb-face {
+  background: color-mix(in oklab, var(--brand) 35%, var(--bg));
+}
+
+.rb:disabled[data-v="ghost"] .rb-face {
+  color: var(--muted-foreground);
+  box-shadow: inset 0 0 0 2px var(--border);
+}
+
+.rb:disabled:is([data-v="glass"], [data-v="ghost-night"]) .rb-face {
+  color: color-mix(in oklab, var(--rb-white) 50%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in oklab, var(--rb-white) 25%, transparent);
+}
+
+/* ── Text link ───────────────────────────────────────────────────────────── */
+
+.rb-link {
+  --rb-e: 0;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  padding-block: 8px;
+  border-radius: 6px;
+  font-weight: 500;
+  color: var(--brand);
+  text-decoration: none;
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rb-link[data-inline] {
+  display: inline;
+  min-height: 0;
+  padding-block: 0;
+  white-space: nowrap;
+}
+
+.rb-link[data-tone="night"] {
+  color: var(--surface);
+}
+
+@media (hover: hover) {
+  .rb-link:hover {
+    --rb-e: 1;
+  }
+}
+
+.rb-link:focus-visible,
+.rb-link:active,
+.rb-link[data-force] {
+  --rb-e: 1;
+}
+
+.rb-link:focus-visible,
+.rb-link[data-force="focus"] {
+  outline-color: color-mix(in oklab, var(--brand) 80%, transparent);
+}
+
+.rb-link[data-tone="night"]:is(:focus-visible, [data-force="focus"]) {
+  outline-color: color-mix(in oklab, var(--surface) 85%, transparent);
+}
+
+.rb-link-text {
+  position: relative;
+}
+
+/* Rest: thin underline (a link is never colour-only). Engaged: a 2 px line grows from the start (right). */
+.rb-link-text::before,
+.rb-link-text::after {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  bottom: -3px;
+  border-radius: 2px;
+  background: currentColor;
+}
+
+.rb-link-text::before {
+  height: 1px;
+  opacity: 0.45;
+}
+
+.rb-link-text::after {
+  height: 2px;
+  transform: scaleX(var(--rb-e));
+  transform-origin: right;
+  transition: transform 250ms var(--ease-out);
+}
+
+:dir(ltr) .rb-link-text::after {
+  transform-origin: left;
+}
+
+.rb-link .rb-arrow {
+  transform: translateX(calc(var(--rb-e) * -3px));
+}
+
+.rb-link .rb-arrow svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Icon button ─────────────────────────────────────────────────────────── */
+
+.rb-icon {
+  --rb-e: 0;
+  --rb-p: 0;
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--brand);
+  cursor: pointer;
+  outline: 3px solid transparent;
+  outline-offset: 3px;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.rb-icon[data-shape="tile"] {
+  border-radius: 14px;
+}
+
+.rb-icon-face {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--rb-white);
+  transform: translateY(calc(var(--rb-e) * -1px + var(--rb-p) * 3px));
+  transition: transform 200ms var(--ease-out);
+}
+
+.rb-icon-face svg {
+  width: 20px;
+  height: 20px;
+}
+
+@media (hover: hover) {
+  .rb-icon:hover:not(:disabled) {
+    --rb-e: 1;
+  }
+}
+
+.rb-icon:focus-visible,
+.rb-icon:active,
+.rb-icon[data-pressed],
+.rb-icon[data-force] {
+  --rb-e: 1;
+}
+
+.rb-icon:active,
+.rb-icon[data-pressed],
+.rb-icon[data-force="pressed"] {
+  --rb-p: 1;
+}
+
+.rb-icon:focus-visible,
+.rb-icon[data-force="focus"] {
+  outline-color: var(--rb-ring);
+}
+
+.rb-icon:disabled {
+  --rb-e: 0;
+  --rb-p: 0;
+  cursor: not-allowed;
+}
+
+.rb-icon:disabled .rb-icon-face {
+  background: color-mix(in oklab, var(--rb-white) 60%, transparent);
+  color: color-mix(in oklab, var(--brand) 45%, transparent);
+}
+
+.rb-icon:disabled .rb-shadow {
+  opacity: 0;
+}
+
+/* ── Reduced motion: everything jumps to its end state ───────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  :is(.rb, .rb-link, .rb-icon),
+  :is(.rb, .rb-link, .rb-icon) *,
+  :is(.rb, .rb-link, .rb-icon) *::before,
+  :is(.rb, .rb-link, .rb-icon) *::after {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    transition-delay: 0s !important;
+  }
+}
